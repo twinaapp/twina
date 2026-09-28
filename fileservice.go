@@ -177,7 +177,8 @@ func (s *FileService) Rename(path, newName string) (string, error) {
 }
 
 func validName(name string) error {
-	if name == "" || name == "." || name == ".." || strings.ContainsRune(name, filepath.Separator) {
+	// "/" separates paths on every platform (Windows accepts it too), "\" only on Windows.
+	if name == "" || name == "." || name == ".." || strings.ContainsAny(name, "/"+string(filepath.Separator)) {
 		return fmt.Errorf("invalid name %q", name)
 	}
 	return nil

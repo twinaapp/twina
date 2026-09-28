@@ -1,0 +1,81 @@
+name: Package
+description: Build and package Twina for one platform, collecting the results in dist/.
+
+inputs:
+  platform:
+    description: darwin, linux or windows
+    required: true
+  arch:
+    description: amd64, arm64, or universal (darwin)
+    required: true
+  version:
+    description: Version to stamp into the build assets (e.g. 1.2.0 or 1.2.0-beta.1). Empty keeps the current one.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Set version
+      if: inputs.version != ''
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        VERSION=${VERSION#v}
+        # Windows and macOS bundle versions must be numeric, so drop any pre-release suffix there.
+        num=${VERSION%%-*}
+        perl -pi -e "s/^(\s*version:\s*)\"[^\"]*\"/\${1}\"$VERSION\"/" build/config.yml build/linux/nfpm/nfpm.yaml
+        perl -pi -e "s/(\"(?:file_version|ProductVersion)\":\s*)\"[^\"]*\"/\${1}\"$num\"/" build/windows/info.json
+        perl -pi -e "s/(<assemblyIdentity type=\"win32\" name=\"app.twina\" version=)\"[^\"]*\"/\${1}\"$num\"/" build/windows/wails.exe.manifest
+        perl -pi -e "s/(!define INFO_PRODUCTVERSION )\"[^\"]*\"/\${1}\"$num\"/" build/windows/nsis/wails_tools.nsh
+        perl -0pi -e "s#(<key>CFBundle(?:ShortVersionString|Version)</key>\s*<string>)[^<]*#\${1}$num#g" build/darwin/Info.plist
+
+    - name: Package (macOS)
+      if: inputs.platform == 'darwin'
+      shell: bash
+      run: |
+        wails3 task darwin:package:universal
+        wails3 task darwin:create:dmg
+
+    - name: Package (Linux)
+      if: inputs.platform == 'linux'
+      shell: bash
+      env:
+        GOARCH: ${{ inputs.arch }} # nfpm.yaml reads ${GOARCH}
+      run: |
+        wails3 task linux:create:appimage ARCH=${{ inputs.arch }}
+        wails3 task linux:generate:deb
+        wails3 task linux:generate:rpm
+
+    - name: Package (Windows)
+      if: inputs.platform == 'windows'
+      shell: bash
+      run: wails3 task windows:package ARCH=${{ inputs.arch }}
+
+    - name: Collect
+      shell: bash
+      env:
+        PLATFORM: ${{ inputs.platform }}
+        ARCH: ${{ inputs.arch }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        v=${VERSION#v}
+        v=${v:-dev-${GITHUB_SHA::7}}
+        mkdir -p dist
+        case "$PLATFORM" in
+          darwin)
+            mv bin/*.dmg "dist/Twina-$v-macos-$ARCH.dmg"
+            ditto -c -k --keepParent bin/Twina.app "dist/Twina-$v-macos-$ARCH.zip"
+            ;;
+          linux)
+            mv bin/*.AppImage "dist/Twina-$v-linux-$ARCH.AppImage"
+            mv bin/*.deb "dist/Twina-$v-linux-$ARCH.deb"
+            mv bin/*.rpm "dist/Twina-$v-linux-$ARCH.rpm"
+            ;;
+          windows)
+            mv bin/*-installer.exe "dist/Twina-$v-windows-$ARCH-setup.exe"
+            mv bin/Twina.exe "dist/Twina-$v-windows-$ARCH-portable.exe"
+            ;;
+        esac
+        ls -l dist
