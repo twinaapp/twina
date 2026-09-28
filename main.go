@@ -75,7 +75,7 @@ func main() {
 
 	files.emit = func(p Progress) { app.Event.Emit(progressEvent, p) }
 
-	app.Window.NewWithOptions(application.WebviewWindowOptions{
+	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "Twina",
 		Width:     1280,
 		Height:    800,
@@ -88,7 +88,9 @@ func main() {
 		},
 		BackgroundColour: application.NewRGB(24, 26, 31),
 		URL:              "/",
+		Hidden:           true, // shown by rememberWindow once placed
 	})
+	rememberWindow(app, window)
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
