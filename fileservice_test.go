@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/updater"
 	"github.com/wailsapp/wails/v3/pkg/updater/providers/github"
 )
@@ -197,5 +198,30 @@ func TestMatchAsset(t *testing.T) {
 	}
 	if i := matchAsset(updater.CheckRequest{Platform: "freebsd", Arch: "amd64"}, assets); i != -1 {
 		t.Errorf("freebsd: got %d, want -1", i)
+	}
+}
+
+func TestFitOnScreen(t *testing.T) {
+	screens := []*application.Screen{
+		{WorkArea: application.Rect{X: 0, Y: 25, Width: 1440, Height: 875}},
+		{WorkArea: application.Rect{X: 1440, Y: 0, Width: 1920, Height: 1080}},
+	}
+	for _, c := range []struct {
+		name string
+		in   application.Rect
+		want application.Rect
+		ok   bool
+	}{
+		{"fits", application.Rect{X: 100, Y: 100, Width: 1000, Height: 600}, application.Rect{X: 100, Y: 100, Width: 1000, Height: 600}, true},
+		{"second screen", application.Rect{X: 1600, Y: 50, Width: 1280, Height: 800}, application.Rect{X: 1600, Y: 50, Width: 1280, Height: 800}, true},
+		{"too big, clamped", application.Rect{X: 0, Y: 25, Width: 2000, Height: 1200}, application.Rect{X: 0, Y: 25, Width: 1440, Height: 875}, true},
+		{"hangs off right, pulled in", application.Rect{X: 3000, Y: 100, Width: 1000, Height: 600}, application.Rect{X: 2360, Y: 100, Width: 1000, Height: 600}, true},
+		{"unplugged monitor", application.Rect{X: -2000, Y: 100, Width: 1000, Height: 600}, application.Rect{X: -2000, Y: 100, Width: 1000, Height: 600}, false},
+		{"title bar above screen", application.Rect{X: 100, Y: -500, Width: 1000, Height: 600}, application.Rect{X: 100, Y: -500, Width: 1000, Height: 600}, false},
+	} {
+		got, ok := fitOnScreen(c.in, screens)
+		if ok != c.ok || got != c.want {
+			t.Errorf("%s: got %+v %v, want %+v %v", c.name, got, ok, c.want, c.ok)
+		}
 	}
 }
