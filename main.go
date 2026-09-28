@@ -33,27 +33,43 @@ func main() {
 		},
 	})
 
-	// A minimal menu: the defaults bind ⌘W (close window) and ⌘R (reload),
-	// which the panels use for closing tabs and refreshing.
-	menu := app.Menu.New()
-	if runtime.GOOS == "darwin" {
-		menu.AddRole(application.AppMenu)
-	}
-	menu.AddRole(application.EditMenu)
-	if runtime.GOOS == "darwin" {
-		menu.AddRole(application.WindowMenu)
-	}
+	updates := false
 	if updatesEnabled() {
 		if err := setupUpdates(app); err != nil {
 			log.Printf("updates disabled: %v", err)
 		} else {
-			menu.AddSubmenu("Help").Add("Check for Updates…").OnClick(func(*application.Context) {
-				go checkForUpdates(app, true)
-			})
+			updates = true
 			app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
 				time.AfterFunc(5*time.Second, func() { checkForUpdates(app, false) })
 			})
 		}
+	}
+	checkNow := func(*application.Context) { go checkForUpdates(app, true) }
+
+	// A minimal menu: the defaults bind ⌘W (close window) and ⌘R (reload),
+	// which the panels use for closing tabs and refreshing.
+	menu := app.Menu.New()
+	if runtime.GOOS == "darwin" {
+		// The AppMenu role, built by hand so Check for Updates can sit under About.
+		appMenu := menu.AddSubmenu("Twina")
+		appMenu.AddRole(application.About)
+		if updates {
+			appMenu.Add("Check for Updates…").OnClick(checkNow)
+		}
+		appMenu.AddSeparator()
+		appMenu.AddRole(application.ServicesMenu)
+		appMenu.AddSeparator()
+		appMenu.AddRole(application.Hide)
+		appMenu.AddRole(application.HideOthers)
+		appMenu.AddRole(application.UnHide)
+		appMenu.AddSeparator()
+		appMenu.AddRole(application.Quit)
+	}
+	menu.AddRole(application.EditMenu)
+	if runtime.GOOS == "darwin" {
+		menu.AddRole(application.WindowMenu)
+	} else if updates {
+		menu.AddSubmenu("Help").Add("Check for Updates…").OnClick(checkNow)
 	}
 	app.Menu.Set(menu)
 
