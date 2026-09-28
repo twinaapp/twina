@@ -51,3 +51,7 @@ On Mac laptops, hold `fn` for F-keys, or use the button bar at the bottom.
 - `frontend/src/lib/Icon.svelte` — file-type icons.
 - `frontend/src/lib/Panel.svelte` — a single file panel.
 - `frontend/src/App.svelte` — two panels, keyboard handling, file operations, F-key bar.
+
+## License
+
+[MIT](LICENSE)

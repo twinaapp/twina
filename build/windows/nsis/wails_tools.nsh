@@ -17,7 +17,7 @@
     !define INFO_PRODUCTVERSION "0.0.0"
 !endif
 !ifndef INFO_COPYRIGHT
-    !define INFO_COPYRIGHT "© 2026 Twina"
+    !define INFO_COPYRIGHT "© 2026 The Twina Authors"
 !endif
 !ifndef PRODUCT_EXECUTABLE
     !define PRODUCT_EXECUTABLE "${INFO_PROJECTNAME}.exe"
