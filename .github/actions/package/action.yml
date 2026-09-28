@@ -49,6 +49,14 @@ runs:
         wails3 task linux:generate:deb
         wails3 task linux:generate:rpm
 
+    - name: Install NSIS
+      if: inputs.platform == 'windows'
+      shell: bash
+      run: |
+        # Not preinstalled on current windows-latest images.
+        [ -x "/c/Program Files (x86)/NSIS/makensis.exe" ] || choco install nsis -y --no-progress
+        echo 'C:\Program Files (x86)\NSIS' >> "$GITHUB_PATH"
+
     - name: Package (Windows)
       if: inputs.platform == 'windows'
       shell: bash
