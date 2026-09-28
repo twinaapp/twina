@@ -5,6 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/wailsapp/wails/v3/pkg/updater"
+	"github.com/wailsapp/wails/v3/pkg/updater/providers/github"
 )
 
 func write(t *testing.T, p, content string) {
@@ -165,5 +168,33 @@ func TestExtOf(t *testing.T) {
 		if got := extOf(name); got != want {
 			t.Errorf("extOf(%q) = %q, want %q", name, got, want)
 		}
+	}
+}
+
+func TestMatchAsset(t *testing.T) {
+	var assets []github.ReleaseAsset
+	for _, n := range []string{
+		"SHA256SUMS.txt",
+		"Twina-1.2.0-linux-amd64.AppImage", "Twina-1.2.0-linux-amd64.deb", "Twina-1.2.0-linux-arm64.AppImage",
+		"Twina-1.2.0-macos-universal.dmg", "Twina-1.2.0-macos-universal.zip",
+		"Twina-1.2.0-windows-amd64-setup.exe", "Twina-1.2.0-windows-amd64-portable.exe",
+		"Twina-1.2.0-windows-arm64-portable.exe",
+	} {
+		assets = append(assets, github.ReleaseAsset{Name: n})
+	}
+	for req, want := range map[updater.CheckRequest]string{
+		{Platform: "darwin", Arch: "arm64"}:  "Twina-1.2.0-macos-universal.zip",
+		{Platform: "darwin", Arch: "amd64"}:  "Twina-1.2.0-macos-universal.zip",
+		{Platform: "windows", Arch: "amd64"}: "Twina-1.2.0-windows-amd64-portable.exe",
+		{Platform: "windows", Arch: "arm64"}: "Twina-1.2.0-windows-arm64-portable.exe",
+		{Platform: "linux", Arch: "arm64"}:   "Twina-1.2.0-linux-arm64.AppImage",
+	} {
+		i := matchAsset(req, assets)
+		if i < 0 || assets[i].Name != want {
+			t.Errorf("%s/%s: got index %d, want %s", req.Platform, req.Arch, i, want)
+		}
+	}
+	if i := matchAsset(updater.CheckRequest{Platform: "freebsd", Arch: "amd64"}, assets); i != -1 {
+		t.Errorf("freebsd: got %d, want -1", i)
 	}
 }
