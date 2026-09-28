@@ -1,0 +1,44 @@
+name: Main
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+
+      # Also regenerates frontend/bindings; main.go embeds frontend/dist, so tests need it.
+      - name: Build frontend
+        run: wails3 task common:build:frontend
+
+      - name: Generated files are up to date
+        if: runner.os == 'Linux'
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum frontend/bindings
+
+      - name: Svelte check
+        if: runner.os == 'Linux'
+        working-directory: frontend
+        run: npm run check
+
+      - run: go vet ./...
+      - run: go test ./...

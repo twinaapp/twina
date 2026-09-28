@@ -1,0 +1,56 @@
+name: Release
+
+# Publishing a release (drafted by Release Drafter) builds the packages and attaches them to it.
+# Run it manually to build the packages as artifacts without publishing.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  package:
+    name: ${{ matrix.platform }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: darwin, arch: universal, runner: macos-latest }
+          - { platform: linux, arch: amd64, runner: ubuntu-24.04 }
+          - { platform: linux, arch: arm64, runner: ubuntu-24.04-arm }
+          - { platform: windows, arch: amd64, runner: windows-latest }
+          - { platform: windows, arch: arm64, runner: windows-latest }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/package
+        with:
+          platform: ${{ matrix.platform }}
+          arch: ${{ matrix.arch }}
+          version: ${{ github.event.release.tag_name }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: twina-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+
+  upload:
+    needs: package
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Attach to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber *

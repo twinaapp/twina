@@ -17,7 +17,7 @@
         PackageDisplayName="Twina"
         PublisherName="CN=Twina"
         PublisherDisplayName="Twina"
-        Version="0.1.0.0"
+        Version="0.0.0.0"
         PackageDescription="A dual-panel file manager">
         <Capabilities>
             <Capability Name="runFullTrust" />
