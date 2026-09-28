@@ -89,6 +89,9 @@ func main() {
 		BackgroundColour: application.NewRGB(24, 26, 31),
 		URL:              "/",
 		Hidden:           true, // shown by rememberWindow once placed
+		// Windows only attaches app.Menu to a window when asked; macOS and
+		// Linux use it regardless.
+		UseApplicationMenu: true,
 	})
 	rememberWindow(app, window)
 
