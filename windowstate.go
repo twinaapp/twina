@@ -105,7 +105,10 @@ func rememberWindow(app *application.App, w *application.WebviewWindow) {
 		// Keep the normal-size bounds while maximised or fullscreen, so
 		// un-maximising after a restart returns to the size the user chose.
 		if state.Maximised = w.IsMaximised(); !state.Maximised && !w.IsFullscreen() {
-			state.Bounds = w.Bounds()
+			// Zero once the window is gone; keep the last good bounds then.
+			if b := w.Bounds(); b.Width > 0 && b.Height > 0 {
+				state.Bounds = b
+			}
 		}
 		saveWindowState(state)
 	}
@@ -119,5 +122,7 @@ func rememberWindow(app *application.App, w *application.WebviewWindow) {
 	}
 	w.OnWindowEvent(events.Common.WindowDidMove, later)
 	w.OnWindowEvent(events.Common.WindowDidResize, later)
-	w.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) { save() })
+	// A hook runs before Wails' own closing listener destroys the window,
+	// while its bounds can still be read.
+	w.RegisterHook(events.Common.WindowClosing, func(*application.WindowEvent) { save() })
 }
