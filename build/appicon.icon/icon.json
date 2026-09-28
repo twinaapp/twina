@@ -1,0 +1,34 @@
+{
+  "fill": {
+    "automatic-gradient": "srgb:0.12157,0.17647,0.30980,1.00000"
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "panels.svg",
+          "name": "panels",
+          "position": {
+            "scale": 1.0,
+            "translation-in-points": [
+              0.0,
+              0.0
+            ]
+          }
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared"
+  }
+}

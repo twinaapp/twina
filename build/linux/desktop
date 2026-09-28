@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=Twina
+Comment=A dual-panel file manager
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/twina %u
+Terminal=false
+Type=Application
+Icon=twina
+Categories=Utility;
+StartupWMClass=Twina
+
+ 
