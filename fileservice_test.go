@@ -175,7 +175,7 @@ func TestMatchAsset(t *testing.T) {
 	var assets []github.ReleaseAsset
 	for _, n := range []string{
 		"SHA256SUMS.txt",
-		"Twina-1.2.0-linux-amd64.AppImage", "Twina-1.2.0-linux-amd64.deb", "Twina-1.2.0-linux-arm64.AppImage",
+		"Twina-1.2.0-linux-amd64.rpm", "Twina-1.2.0-linux-amd64.deb", "Twina-1.2.0-linux-arm64.deb",
 		"Twina-1.2.0-macos-universal.dmg", "Twina-1.2.0-macos-universal.zip",
 		"Twina-1.2.0-windows-amd64-setup.exe", "Twina-1.2.0-windows-amd64-portable.exe",
 		"Twina-1.2.0-windows-arm64-portable.exe",
@@ -187,7 +187,8 @@ func TestMatchAsset(t *testing.T) {
 		{Platform: "darwin", Arch: "amd64"}:  "Twina-1.2.0-macos-universal.zip",
 		{Platform: "windows", Arch: "amd64"}: "Twina-1.2.0-windows-amd64-portable.exe",
 		{Platform: "windows", Arch: "arm64"}: "Twina-1.2.0-windows-arm64-portable.exe",
-		{Platform: "linux", Arch: "arm64"}:   "Twina-1.2.0-linux-arm64.AppImage",
+		{Platform: "linux", Arch: "amd64"}:   "Twina-1.2.0-linux-amd64.deb",
+		{Platform: "linux", Arch: "arm64"}:   "Twina-1.2.0-linux-arm64.deb",
 	} {
 		i := matchAsset(req, assets)
 		if i < 0 || assets[i].Name != want {

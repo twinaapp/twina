@@ -14,8 +14,8 @@ import (
 const repo = "twinaapp/twina"
 
 // selfUpdate reports whether the updater can replace the app in place. On
-// Linux the AppImage runs from a read-only mount and packages live in
-// /usr/bin, so there we only point to the release page.
+// Linux the app is installed from a .deb/.rpm into /usr/bin, so there we only
+// point to the release page.
 var selfUpdate = runtime.GOOS == "darwin" || runtime.GOOS == "windows"
 
 func updatesEnabled() bool { return version != "0.0.0" }
@@ -44,7 +44,8 @@ func matchAsset(req updater.CheckRequest, assets []github.ReleaseAsset) int {
 	case "windows":
 		suffix = "-windows-" + req.Arch + "-portable.exe"
 	default:
-		suffix = "-" + req.Platform + "-" + req.Arch + ".AppImage"
+		// Only used to confirm the release has a Linux build; see selfUpdate.
+		suffix = "-" + req.Platform + "-" + req.Arch + ".deb"
 	}
 	for i, a := range assets {
 		if strings.HasSuffix(a.Name, suffix) {

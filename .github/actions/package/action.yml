@@ -45,8 +45,7 @@ runs:
       env:
         GOARCH: ${{ inputs.arch }} # nfpm.yaml reads ${GOARCH}
       run: |
-        wails3 task linux:create:appimage ARCH=${{ inputs.arch }}
-        wails3 task linux:generate:deb
+        wails3 task linux:create:deb ARCH=${{ inputs.arch }}
         wails3 task linux:generate:rpm
 
     - name: Install NSIS
@@ -78,7 +77,6 @@ runs:
             ditto -c -k --keepParent bin/Twina.app "dist/Twina-$v-macos-$ARCH.zip"
             ;;
           linux)
-            mv bin/*.AppImage "dist/Twina-$v-linux-$ARCH.AppImage"
             mv bin/*.deb "dist/Twina-$v-linux-$ARCH.deb"
             mv bin/*.rpm "dist/Twina-$v-linux-$ARCH.rpm"
             ;;
