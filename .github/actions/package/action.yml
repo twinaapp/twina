@@ -25,6 +25,7 @@ runs:
         VERSION=${VERSION#v}
         # Windows and macOS bundle versions must be numeric, so drop any pre-release suffix there.
         num=${VERSION%%-*}
+        perl -pi -e "s/^(const version = )\"[^\"]*\"/\${1}\"$VERSION\"/" version.go
         perl -pi -e "s/^(\s*version:\s*)\"[^\"]*\"/\${1}\"$VERSION\"/" build/config.yml build/linux/nfpm/nfpm.yaml
         perl -pi -e "s/(\"(?:file_version|ProductVersion)\":\s*)\"[^\"]*\"/\${1}\"$num\"/" build/windows/info.json
         perl -pi -e "s/(<assemblyIdentity type=\"win32\" name=\"app.twina\" version=)\"[^\"]*\"/\${1}\"$num\"/" build/windows/wails.exe.manifest

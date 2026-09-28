@@ -22,9 +22,20 @@ runs:
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends libgtk-4-dev libwebkitgtk-6.0-dev
 
-    - name: Install wails3
+    - id: wails
       shell: bash
       run: |
-        version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
-        go install "github.com/wailsapp/wails/v3/cmd/wails3@$version"
+        echo "version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)" >> "$GITHUB_OUTPUT"
+        echo "bin=$(go env GOPATH)/bin" >> "$GITHUB_OUTPUT"
         echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+    - id: wails-cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.wails.outputs.bin }}/wails3*
+        key: wails3-${{ runner.os }}-${{ runner.arch }}-${{ steps.wails.outputs.version }}
+
+    - name: Install wails3
+      if: steps.wails-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: go install "github.com/wailsapp/wails/v3/cmd/wails3@${{ steps.wails.outputs.version }}"

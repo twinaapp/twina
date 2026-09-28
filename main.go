@@ -4,8 +4,10 @@ import (
 	"embed"
 	"log"
 	"runtime"
+	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 //go:embed all:frontend/dist
@@ -40,6 +42,18 @@ func main() {
 	menu.AddRole(application.EditMenu)
 	if runtime.GOOS == "darwin" {
 		menu.AddRole(application.WindowMenu)
+	}
+	if updatesEnabled() {
+		if err := setupUpdates(app); err != nil {
+			log.Printf("updates disabled: %v", err)
+		} else {
+			menu.AddSubmenu("Help").Add("Check for Updates…").OnClick(func(*application.Context) {
+				go checkForUpdates(app, true)
+			})
+			app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
+				time.AfterFunc(5*time.Second, func() { checkForUpdates(app, false) })
+			})
+		}
 	}
 	app.Menu.Set(menu)
 

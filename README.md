@@ -45,6 +45,7 @@ On Mac laptops, hold `fn` for F-keys, or use the button bar at the bottom.
 
 - `fileservice.go` — Go service bound to the frontend: list, rename, mkdir, trash, open, read.
 - `transfer.go` — copy/move with overwrite/merge, progress events and cancellation (via the call's context).
+- `updates.go` — update checks against GitHub Releases (release builds only; `version.go` stays `0.0.0` locally). Installs in place on macOS/Windows, links to the release on Linux.
 - `trash_*.go` — system Trash per platform (NSWorkspace on macOS, freedesktop on Linux, Recycle Bin on Windows).
 - `frontend/src/lib/state.svelte.ts` — per-tab panel state (sorting, selection, cursor) and per-side tabs, using runes.
 - `frontend/src/lib/Icon.svelte` — file-type icons.
