@@ -9,7 +9,7 @@ info:
   productName: "Twina" # The name of the application
   productIdentifier: "app.twina" # The unique product identifier
   description: "A dual-panel file manager" # The application description
-  copyright: "© 2026 The Twina Authors" # Copyright text
+  copyright: "© 2026 Vadim Homchik" # Copyright text
   comments: "https://twina.app" # Comments
   version: "0.0.0" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
