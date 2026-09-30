@@ -95,6 +95,7 @@ func rememberWindow(app *application.App, w *application.WebviewWindow) {
 			}
 		}
 		w.Show()
+		redrawMenuBar(w)
 	})
 
 	var mu sync.Mutex
