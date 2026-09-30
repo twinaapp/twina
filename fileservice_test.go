@@ -4,7 +4,9 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/updater"
@@ -223,5 +225,80 @@ func TestFitOnScreen(t *testing.T) {
 		if ok != c.ok || got != c.want {
 			t.Errorf("%s: got %+v %v, want %+v %v", c.name, got, ok, c.want, c.ok)
 		}
+	}
+}
+
+func TestWatch(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	os.Mkdir(sub, 0o755)
+	got := make(chan string, 16)
+	s := &FileService{changed: func(d string) { got <- d }}
+	s.Watch([]string{dir, dir}) // duplicates are fine
+	time.Sleep(300 * time.Millisecond)
+
+	expect := func(what string) {
+		t.Helper()
+		select {
+		case d := <-got:
+			if d != dir {
+				t.Fatalf("%s: changed %q, want %q", what, d, dir)
+			}
+		case <-time.After(3 * time.Second):
+			t.Fatalf("%s: no change reported", what)
+		}
+		time.Sleep(300 * time.Millisecond)
+		for len(got) > 0 {
+			<-got
+		}
+	}
+	write(t, filepath.Join(dir, "new.txt"), "x")
+	expect("create")
+	os.Rename(filepath.Join(dir, "new.txt"), filepath.Join(dir, "renamed.txt"))
+	expect("rename")
+	os.Remove(filepath.Join(dir, "renamed.txt"))
+	expect("delete")
+
+	// Changes inside a subfolder aren't the watched folder's entries.
+	write(t, filepath.Join(sub, "deep.txt"), "x")
+	select {
+	case d := <-got:
+		t.Fatalf("change in subfolder reported as %q", d)
+	case <-time.After(time.Second):
+	}
+
+	s.Watch(nil)
+	time.Sleep(300 * time.Millisecond)
+	write(t, filepath.Join(dir, "after.txt"), "x")
+	select {
+	case d := <-got:
+		t.Fatalf("unwatched folder reported %q", d)
+	case <-time.After(time.Second):
+	}
+}
+
+func TestDebouncer(t *testing.T) {
+	var mu sync.Mutex
+	var fired []time.Duration
+	start := time.Now()
+	d := &debouncer{wait: 50 * time.Millisecond, maxWait: 200 * time.Millisecond, fn: func(string) {
+		mu.Lock()
+		fired = append(fired, time.Since(start))
+		mu.Unlock()
+	}}
+	// A steady stream of changes for 500ms: without maxWait nothing would fire
+	// until it stops.
+	for time.Since(start) < 500*time.Millisecond {
+		d.hit("/a")
+		time.Sleep(10 * time.Millisecond)
+	}
+	time.Sleep(150 * time.Millisecond)
+	mu.Lock()
+	defer mu.Unlock()
+	if len(fired) < 3 {
+		t.Fatalf("fired %d times (%v), want a reload about every 200ms plus one at the end", len(fired), fired)
+	}
+	if fired[0] > 300*time.Millisecond {
+		t.Errorf("first reload after %v, want within maxWait", fired[0])
 	}
 }
