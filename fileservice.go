@@ -11,12 +11,17 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"unicode/utf8"
 )
 
 // FileService exposes filesystem operations to the frontend panels.
 type FileService struct {
-	emit func(Progress) // reports copy/move progress; nil in tests
+	emit    func(Progress)   // reports copy/move progress; nil in tests
+	changed func(dir string) // reports an open folder changed on disk; nil in tests
+
+	watchOnce sync.Once
+	watcher   dirWatcher
 }
 
 type Entry struct {

@@ -23,6 +23,7 @@ export class PanelState {
   loading = $state(false);
 
   onchange?: () => void;
+  private loadSeq = 0;
 
   rows: Row[] = $derived.by(() => {
     const visible = settings.showHidden ? this.entries : this.entries.filter((e) => !e.hidden);
@@ -66,10 +67,13 @@ export class PanelState {
 
   /** Load a directory. `focus` is the name to place the cursor on afterwards. */
   async load(path: string, focus?: string) {
+    // Reloads can overlap (a change on disk while the user navigates); only
+    // the latest one may update the panel.
+    const seq = ++this.loadSeq;
     this.loading = true;
     try {
       const listing = await FileService.List(path);
-      if (!listing) return;
+      if (!listing || seq !== this.loadSeq) return;
       const changedDir = listing.path !== this.path;
       this.path = listing.path;
       this.parent = listing.parent;
@@ -81,9 +85,9 @@ export class PanelState {
       this.cursor = idx >= 0 ? idx : changedDir ? 0 : Math.min(this.cursor, this.rows.length - 1);
       this.onchange?.();
     } catch (err) {
-      this.error = errorText(err);
+      if (seq === this.loadSeq) this.error = errorText(err);
     } finally {
-      this.loading = false;
+      if (seq === this.loadSeq) this.loading = false;
     }
   }
 

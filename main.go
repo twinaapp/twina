@@ -15,6 +15,7 @@ var assets embed.FS
 
 func init() {
 	application.RegisterEvent[Progress](progressEvent)
+	application.RegisterEvent[string](dirChangedEvent)
 }
 
 func main() {
@@ -74,6 +75,7 @@ func main() {
 	app.Menu.Set(menu)
 
 	files.emit = func(p Progress) { app.Event.Emit(progressEvent, p) }
+	files.changed = func(dir string) { app.Event.Emit(dirChangedEvent, dir) }
 
 	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "Twina",

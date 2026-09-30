@@ -34,12 +34,27 @@
     try { settings.showHidden = localStorage.getItem('twina.hidden') === '1'; } catch {}
     FileService.Home().then((home) => Promise.all([left.restore(home), right.restore(home)]));
 
-    return Events.On('fileop:progress', (ev) => {
+    const offProgress = Events.On('fileop:progress', (ev) => {
       const p = ev.data;
       if (!job || p.job !== job.id) return;
       job.progress = p;
       if (p.phase === 'done') jobDone?.(p);
     });
+    // An open folder changed on disk (terminal, another app): reload the tabs
+    // showing it, or step up if the folder itself is gone.
+    const offChanged = Events.On('fs:changed', async (ev) => {
+      for (const tab of [...left.tabs, ...right.tabs]) {
+        if (tab.path !== ev.data) continue;
+        await tab.refresh();
+        if (tab.error) await tab.goUp();
+      }
+    });
+    return () => { offProgress(); offChanged(); };
+  });
+
+  // Watch every folder open in a tab.
+  $effect(() => {
+    FileService.Watch([...left.tabs, ...right.tabs].map((t) => t.path));
   });
 
   $effect(() => {

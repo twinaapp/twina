@@ -13,6 +13,7 @@ declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
             "fileop:progress": main$0.Progress;
+            "fs:changed": string;
         }
     }
 }

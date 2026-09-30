@@ -86,3 +86,10 @@ export function Rename(path: string, newName: string): $CancellablePromise<strin
 export function Trash(paths: string[] | null): $CancellablePromise<$models.TrashResult | null> {
     return $Call.ByID(1486438983, paths);
 }
+
+/**
+ * Watch replaces the set of watched folders with the ones open in any tab.
+ */
+export function Watch(dirs: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(213795786, dirs);
+}
