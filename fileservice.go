@@ -47,6 +47,8 @@ type FileText struct {
 	Content   string `json:"content"`
 	Truncated bool   `json:"truncated"`
 	Binary    bool   `json:"binary"`
+	Image     bool   `json:"image"` // shown from mediaPath instead of Content
+	Video     bool   `json:"video"` // played from mediaPath instead of Content
 	Size      int64  `json:"size"`
 }
 
@@ -204,6 +206,8 @@ func (s *FileService) Open(path string) error {
 }
 
 // ReadText returns up to maxViewBytes of a file for the built-in viewer.
+// Images and videos come back without content; the viewer loads them from
+// mediaPath.
 func (s *FileService) ReadText(path string) (*FileText, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -213,6 +217,10 @@ func (s *FileService) ReadText(path string) (*FileText, error) {
 	info, err := f.Stat()
 	if err != nil {
 		return nil, err
+	}
+	if ctype := mediaType(path); ctype != "" && !info.IsDir() {
+		video := strings.HasPrefix(ctype, "video/")
+		return &FileText{Path: path, Size: info.Size(), Image: !video, Video: video}, nil
 	}
 	buf, err := io.ReadAll(io.LimitReader(f, maxViewBytes))
 	if err != nil {

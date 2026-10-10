@@ -22,6 +22,16 @@ export interface FileText {
     "content": string;
     "truncated": boolean;
     "binary": boolean;
+
+    /**
+     * shown from mediaPath instead of Content
+     */
+    "image": boolean;
+
+    /**
+     * played from mediaPath instead of Content
+     */
+    "video": boolean;
     "size": number;
 }
 
