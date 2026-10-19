@@ -70,6 +70,8 @@ export function Open(path: string): $CancellablePromise<void> {
 
 /**
  * ReadText returns up to maxViewBytes of a file for the built-in viewer.
+ * Images and videos come back without content; the viewer loads them from
+ * mediaPath.
  */
 export function ReadText(path: string): $CancellablePromise<$models.FileText | null> {
     return $Call.ByID(4223971624, path);

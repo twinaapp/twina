@@ -130,6 +130,25 @@
     }
   }
 
+  // Matches mediaTypes in mediaview.go.
+  const mediaName = /\.(png|jpe?g|gif|webp|avif|svg|bmp|ico|heic|tiff?|mp4|m4v|mov|webm|ogv|mkv|avi)$/i;
+
+  /** Show the next (1) or previous (-1) image or video in the active panel, moving its cursor along. */
+  async function step(delta: number) {
+    const rows = active.rows;
+    for (let i = active.cursor + delta; i >= 0 && i < rows.length; i += delta) {
+      const row = rows[i];
+      if (row.up || row.isDir || !mediaName.test(row.name)) continue;
+      active.cursor = i;
+      try {
+        viewing = await FileService.ReadText(row.path);
+      } catch (err) {
+        alertError('Cannot view file', err);
+      }
+      return;
+    }
+  }
+
   async function transfer(kind: 'Copy' | 'Move') {
     const targets = active.targets();
     if (!targets.length) return;
@@ -387,7 +406,7 @@
 </div>
 
 {#if viewing}
-  <Viewer file={viewing} onclose={() => (viewing = null)} />
+  <Viewer file={viewing} onclose={() => (viewing = null)} onstep={step} />
 {/if}
 
 {#if job?.visible}
