@@ -1,17 +1,21 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { Events } from '@wailsio/runtime';
+  import { FileService } from '../../bindings/github.com/twinaapp/twina';
   import type { FileText } from '../../bindings/github.com/twinaapp/twina/models';
   import { formatSize } from './state.svelte';
 
   let { file, onclose, onstep }: { file: FileText; onclose: () => void; onstep: (delta: number) => void } = $props();
   let bodyEl = $state<HTMLElement>();
+  let viewerEl = $state<HTMLElement>();
 
   const name = $derived(file.path.split(/[\\/]/).pop());
 
   // Images: fit to the window, or actual size (Space or click to toggle).
   // Videos always fit, and play in the webview's own player.
   // Sizes are worked out here rather than left to CSS so fit never overflows.
+  // PDFs go to the webview's PDF viewer. All three step with ← and →.
   const media = $derived(file.image || file.video);
+  const stepping = $derived(media || file.pdf);
   let fit = $state(true);
   let broken = $state(false);
   let natural = $state<{ w: number; h: number } | null>(null);
@@ -66,11 +70,47 @@
 
   let video = $state<HTMLVideoElement>();
 
+  // PDFs in their frames, newest last. The next one loads in a hidden frame
+  // and only then replaces the one on screen, so stepping between PDFs doesn't
+  // flash an empty page. Reruns for every new file (it reads src).
+  type PdfFrame = { id: number; src: string; ready: boolean };
+  let pdfFrames = $state<PdfFrame[]>([]);
+  let pdfIds = 0;
+  $effect(() => {
+    const url = src;
+    if (!file.pdf) {
+      pdfFrames = [];
+      return;
+    }
+    if (pdfFrames.at(-1)?.src !== url) pdfFrames.push({ id: ++pdfIds, src: url, ready: false });
+  });
+
+  function pdfLoaded(frame: PdfFrame) {
+    // A frame left behind by quick stepping can finish after a newer one.
+    if (pdfFrames.at(-1)?.id !== frame.id) return;
+    frame.ready = true;
+    pdfFrames = [frame];
+  }
+
   function videoReady() {
     if (video) natural = { w: video.videoWidth, h: video.videoHeight };
   }
 
-  onMount(() => bodyEl?.focus());
+  // Reruns for every new file (it reads src). A PDF has no body of ours to
+  // focus, so the dialog takes the keys; and stepping between an image and a
+  // PDF removes the focused element, which would take the keys with it.
+  $effect(() => {
+    if (src) (bodyEl ?? viewerEl)?.focus();
+  });
+
+  // A PDF takes the keyboard once clicked into, so Esc and F3 are caught
+  // natively while one is shown and come back as viewer:close.
+  $effect(() => {
+    if (!file.pdf) return;
+    FileService.CatchViewerKeys(true);
+    const off = Events.On('viewer:close', onclose);
+    return () => { off(); FileService.CatchViewerKeys(false); };
+  });
 
   // Runs in the capture phase so a focused video's own controls don't also act
   // on Space and the arrows.
@@ -80,7 +120,7 @@
       onclose();
     } else if (media && (left || right) && e.shiftKey && video) {
       video.currentTime += left ? -5 : 5;
-    } else if (media && (left || right)) {
+    } else if (stepping && (left || right)) {
       onstep(left ? -1 : 1);
     } else if (e.key === ' ' && file.video && video && !broken) {
       if (video.paused) video.play(); else video.pause();
@@ -94,11 +134,11 @@
   }
 </script>
 
-<div class="viewer" role="dialog" aria-label="View {name}" tabindex="-1" onkeydowncapture={keydown}>
+<div class="viewer" bind:this={viewerEl} role="dialog" aria-label="View {name}" tabindex="-1" onkeydowncapture={keydown}>
   <header>
     <span class="title">{name}</span>
     <span class="meta">{formatSize(file.size)}{natural?.w ? ` · ${natural.w} × ${natural.h}` : ''}{shown?.zoom ? ` · ${Math.round(shown.zoom * 100)}%` : ''}{file.truncated ? ' · showing first 2 MB' : ''}</span>
-    {#if media}
+    {#if stepping}
       <button class="btn" onclick={() => onstep(-1)} title="Previous file">←</button>
       <button class="btn" onclick={() => onstep(1)} title="Next file">→</button>
     {/if}
@@ -124,6 +164,13 @@
         <div class="stage" {@attach (el) => { if (img) el.replaceChildren(img); }}></div>
       {/if}
     </div>
+  {:else if file.pdf}
+    <!-- The webview's own PDF viewer: pages, zoom, search and printing. -->
+    <div class="pdf">
+      {#each pdfFrames as frame (frame.id)}
+        <iframe src={frame.src} title={name} class:loading={!frame.ready} onload={() => pdfLoaded(frame)}></iframe>
+      {/each}
+    </div>
   {:else}
     <pre bind:this={bodyEl} tabindex="-1">{#if file.binary}Binary file — press F4 or Enter in the panel to open it with the default app.{:else}{file.content}{/if}</pre>
   {/if}
@@ -138,6 +185,7 @@
     background: var(--bg);
     z-index: 5;
     padding-top: var(--titlebar);
+    outline: none;
   }
   header {
     display: flex;
@@ -181,5 +229,8 @@
     min-height: 100%;
   }
   .stage :global(img), video { display: block; flex: none; }
+  .pdf { flex: 1; min-height: 0; position: relative; }
+  .pdf iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .pdf iframe.loading { visibility: hidden; }
   .note { margin: 0; text-align: center; padding: 16px; color: var(--muted); }
 </style>

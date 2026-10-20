@@ -16,6 +16,7 @@ var assets embed.FS
 func init() {
 	application.RegisterEvent[Progress](progressEvent)
 	application.RegisterEvent[string](dirChangedEvent)
+	application.RegisterEvent[application.Void](viewerCloseEvent)
 }
 
 func main() {
@@ -76,6 +77,7 @@ func main() {
 
 	files.emit = func(p Progress) { app.Event.Emit(progressEvent, p) }
 	files.changed = func(dir string) { app.Event.Emit(dirChangedEvent, dir) }
+	files.viewerKeys = func(on bool) { catchViewerKeys(app, on) }
 
 	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "Twina",

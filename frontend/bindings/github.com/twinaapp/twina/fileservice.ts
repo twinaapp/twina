@@ -15,6 +15,15 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as $models from "./models.js";
 
 /**
+ * CatchViewerKeys turns native Esc and F3 handling on while the viewer shows
+ * a PDF and off again after. Once the user clicks into the PDF, the webview's
+ * PDF viewer takes the keyboard and the page never sees those keys.
+ */
+export function CatchViewerKeys(on: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3425363560, on);
+}
+
+/**
  * Conflicts returns the names of sources that already exist in destDir.
  */
 export function Conflicts(sources: string[] | null, destDir: string): $CancellablePromise<string[] | null> {
@@ -70,8 +79,8 @@ export function Open(path: string): $CancellablePromise<void> {
 
 /**
  * ReadText returns up to maxViewBytes of a file for the built-in viewer.
- * Images and videos come back without content; the viewer loads them from
- * mediaPath.
+ * Images, videos and PDFs come back without content; the viewer loads them
+ * from mediaPath.
  */
 export function ReadText(path: string): $CancellablePromise<$models.FileText | null> {
     return $Call.ByID(4223971624, path);
