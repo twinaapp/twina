@@ -32,6 +32,11 @@ export interface FileText {
      * played from mediaPath instead of Content
      */
     "video": boolean;
+
+    /**
+     * rendered from mediaPath instead of Content
+     */
+    "pdf": boolean;
     "size": number;
 }
 

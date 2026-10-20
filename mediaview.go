@@ -4,12 +4,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// mediaPath is where the viewer loads image and video bytes from:
-// /localfile?path=… The webview decodes and plays them itself, so no media
-// libraries are needed.
+// mediaPath is where the viewer loads image, video and PDF bytes from:
+// /localfile?path=… The webview decodes, plays and renders them itself, so no
+// media libraries are needed.
 const mediaPath = "/localfile"
 
 // mediaTypes lists the extensions the viewer shows as pictures or plays as
@@ -39,12 +42,19 @@ var mediaTypes = map[string]string{
 	".avi":  "video/x-msvideo",
 }
 
-// mediaType returns the Content-Type for a viewable image or video, or "".
+// WebKitGTK has no PDF viewer, so on Linux PDFs stay binary files.
+func init() {
+	if runtime.GOOS != "linux" {
+		mediaTypes[".pdf"] = "application/pdf"
+	}
+}
+
+// mediaType returns the Content-Type for a viewable image, video or PDF, or "".
 func mediaType(path string) string {
 	return mediaTypes[strings.ToLower(filepath.Ext(path))]
 }
 
-// withMedia serves image and video files from disk at mediaPath and passes
+// withMedia serves image, video and PDF files from disk at mediaPath and passes
 // every other request to next. Range requests, which video seeking relies on,
 // are answered by http.ServeContent.
 func withMedia(next http.Handler) http.Handler {
@@ -83,4 +93,36 @@ func withMedia(next http.Handler) http.Handler {
 		w.Header().Set("Cache-Control", "no-store")
 		http.ServeContent(w, r, info.Name(), info.ModTime(), f)
 	})
+}
+
+// viewerCloseEvent asks the viewer to close. It is emitted for Esc and F3
+// while CatchViewerKeys is on.
+const viewerCloseEvent = "viewer:close"
+
+// viewerKeys are the accelerators, in Wails' normalised form, that close the
+// viewer while it shows a PDF.
+var viewerKeys = []string{"ESCAPE", "F3"}
+
+// CatchViewerKeys turns native Esc and F3 handling on while the viewer shows
+// a PDF and off again after. Once the user clicks into the PDF, the webview's
+// PDF viewer takes the keyboard and the page never sees those keys.
+func (s *FileService) CatchViewerKeys(on bool) {
+	if s.viewerKeys != nil {
+		s.viewerKeys(on)
+	}
+}
+
+func catchViewerKeys(app *application.App, on bool) {
+	for _, key := range viewerKeys {
+		if !on {
+			app.KeyBinding.Remove(key)
+			continue
+		}
+		app.KeyBinding.Add(key, func(application.Window) {
+			// Drop the bindings straight away, so a page reload while a PDF
+			// was open can't leave Esc caught for the whole app.
+			catchViewerKeys(app, false)
+			app.Event.Emit(viewerCloseEvent)
+		})
+	}
 }

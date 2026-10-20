@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -58,5 +59,25 @@ func TestMedia(t *testing.T) {
 	h.ServeHTTP(rec, httptest.NewRequest("GET", "/index.html", nil))
 	if rec.Code != http.StatusTeapot {
 		t.Errorf("other paths should reach the asset handler, got %d", rec.Code)
+	}
+
+	// PDFs are rendered by the webview, except on Linux where it has no viewer.
+	pdf := filepath.Join(root, "doc.pdf")
+	write(t, pdf, "%PDF-1.7 fake")
+	ft, err = (&FileService{}).ReadText(pdf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if runtime.GOOS == "linux" {
+		if ft.PDF || !ft.Binary {
+			t.Fatalf("ReadText PDF on Linux: %+v", ft)
+		}
+		return
+	}
+	if !ft.PDF || ft.Image || ft.Video || ft.Content != "" {
+		t.Fatalf("ReadText PDF: %+v", ft)
+	}
+	if rec := get("GET", pdf); rec.Code != 200 || rec.Header().Get("Content-Type") != "application/pdf" {
+		t.Fatalf("PDF: %d %q", rec.Code, rec.Header().Get("Content-Type"))
 	}
 }

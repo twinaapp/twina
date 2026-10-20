@@ -130,21 +130,26 @@
     }
   }
 
-  // Matches mediaTypes in mediaview.go.
-  const mediaName = /\.(png|jpe?g|gif|webp|avif|svg|bmp|ico|heic|tiff?|mp4|m4v|mov|webm|ogv|mkv|avi)$/i;
+  // Matches mediaTypes in mediaview.go. PDFs aren't viewable on Linux, so
+  // ReadText decides; this only saves asking about every other file.
+  const mediaName = /\.(png|jpe?g|gif|webp|avif|svg|bmp|ico|heic|tiff?|mp4|m4v|mov|webm|ogv|mkv|avi|pdf)$/i;
 
-  /** Show the next (1) or previous (-1) image or video in the active panel, moving its cursor along. */
+  /** Show the next (1) or previous (-1) image, video or PDF in the active panel, moving its cursor along. */
   async function step(delta: number) {
     const rows = active.rows;
     for (let i = active.cursor + delta; i >= 0 && i < rows.length; i += delta) {
       const row = rows[i];
       if (row.up || row.isDir || !mediaName.test(row.name)) continue;
-      active.cursor = i;
+      let file: FileText | null;
       try {
-        viewing = await FileService.ReadText(row.path);
+        file = await FileService.ReadText(row.path);
       } catch (err) {
         alertError('Cannot view file', err);
+        return;
       }
+      if (!file || !(file.image || file.video || file.pdf)) continue;
+      active.cursor = i;
+      viewing = file;
       return;
     }
   }

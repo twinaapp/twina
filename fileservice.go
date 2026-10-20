@@ -17,8 +17,9 @@ import (
 
 // FileService exposes filesystem operations to the frontend panels.
 type FileService struct {
-	emit    func(Progress)   // reports copy/move progress; nil in tests
-	changed func(dir string) // reports an open folder changed on disk; nil in tests
+	emit       func(Progress)   // reports copy/move progress; nil in tests
+	changed    func(dir string) // reports an open folder changed on disk; nil in tests
+	viewerKeys func(on bool)    // see CatchViewerKeys; nil in tests
 
 	watchOnce sync.Once
 	watcher   dirWatcher
@@ -49,6 +50,7 @@ type FileText struct {
 	Binary    bool   `json:"binary"`
 	Image     bool   `json:"image"` // shown from mediaPath instead of Content
 	Video     bool   `json:"video"` // played from mediaPath instead of Content
+	PDF       bool   `json:"pdf"`   // rendered from mediaPath instead of Content
 	Size      int64  `json:"size"`
 }
 
@@ -206,8 +208,8 @@ func (s *FileService) Open(path string) error {
 }
 
 // ReadText returns up to maxViewBytes of a file for the built-in viewer.
-// Images and videos come back without content; the viewer loads them from
-// mediaPath.
+// Images, videos and PDFs come back without content; the viewer loads them
+// from mediaPath.
 func (s *FileService) ReadText(path string) (*FileText, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -219,8 +221,16 @@ func (s *FileService) ReadText(path string) (*FileText, error) {
 		return nil, err
 	}
 	if ctype := mediaType(path); ctype != "" && !info.IsDir() {
-		video := strings.HasPrefix(ctype, "video/")
-		return &FileText{Path: path, Size: info.Size(), Image: !video, Video: video}, nil
+		ft := &FileText{Path: path, Size: info.Size()}
+		switch {
+		case ctype == "application/pdf":
+			ft.PDF = true
+		case strings.HasPrefix(ctype, "video/"):
+			ft.Video = true
+		default:
+			ft.Image = true
+		}
+		return ft, nil
 	}
 	buf, err := io.ReadAll(io.LimitReader(f, maxViewBytes))
 	if err != nil {

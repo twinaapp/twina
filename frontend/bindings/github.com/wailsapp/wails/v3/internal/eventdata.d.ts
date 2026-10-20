@@ -14,6 +14,7 @@ declare module "@wailsio/runtime" {
         interface CustomEvents {
             "fileop:progress": main$0.Progress;
             "fs:changed": string;
+            "viewer:close": void;
         }
     }
 }
