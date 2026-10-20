@@ -63,7 +63,8 @@ func TestMedia(t *testing.T) {
 
 	// PDFs are rendered by the webview, except on Linux where it has no viewer.
 	pdf := filepath.Join(root, "doc.pdf")
-	write(t, pdf, "%PDF-1.7 fake")
+	// Real PDFs follow the header with a line of non-ASCII bytes.
+	write(t, pdf, "%PDF-1.7\n%\xe2\xe3\xcf\xd3\nfake")
 	ft, err = (&FileService{}).ReadText(pdf)
 	if err != nil {
 		t.Fatal(err)
